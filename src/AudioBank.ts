@@ -1,6 +1,17 @@
 import p5 from "p5";
 import * as Tone from "tone";
 
+// 録音 Blob の実 MIME 型から保存ファイルの拡張子を導く。
+// mimeType 固定ではなく実態(Blob.type)を見るので、mp4/webm どちらで
+// 録れても「中身の形式」と「拡張子」が一致する。
+function extensionForMime(mime: string): string {
+  if (mime.includes("mp4")) return ".mp4";
+  if (mime.includes("webm")) return ".webm";
+  if (mime.includes("ogg")) return ".ogg";
+  if (mime.includes("wav")) return ".wav";
+  return ".mp4"; // 不明時は本番(iPad Safari)の既定である mp4 とする
+}
+
 class AudioBank {
   p: p5;
   x: number;
@@ -10,6 +21,7 @@ class AudioBank {
   loop: boolean;
   recording: boolean;
   recordedURL: string;
+  recordedType: string;
   player: Tone.Player;
   id: number;
   recIcon: p5.Element;
@@ -48,6 +60,7 @@ class AudioBank {
     this.loop = false;
     this.recording = false;
     this.recordedURL = "";
+    this.recordedType = "";
     this.player = new Tone.Player().toDestination();
     this.id = id;
     this.recIcon = recIcon;
@@ -77,6 +90,8 @@ class AudioBank {
       this.recording = false;
       this.mic.disconnect(this.analyser);
       const recorded = await recorder.stop();
+      // 実際に録れた形式（拡張子の決定に使う）を保持しておく。
+      this.recordedType = recorded.type;
       const url = URL.createObjectURL(recorded);
       this.recordedURL = url;
       await this.player.load(url);
@@ -89,8 +104,11 @@ class AudioBank {
 
   download() {
     if (this.recordedURL === "") return;
+    const ext = extensionForMime(this.recordedType);
+    // ISO 日時の ":" や "." が拡張子と誤認されないよう "-" に置換する。
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const anchor = document.createElement("a");
-    anchor.download = `record-${this.id}-${new Date().toISOString()}`;
+    anchor.download = `record-${this.id}-${stamp}${ext}`;
     anchor.href = this.recordedURL;
     anchor.click();
   }
