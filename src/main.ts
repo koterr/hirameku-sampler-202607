@@ -28,13 +28,13 @@ function setupMicGainSlider(micGain: Tone.Gain) {
   const label = document.createElement("label");
   label.id = "mic-gain-label";
   label.setAttribute("for", "mic-gain-slider");
-  label.textContent = "マイク入力 Mic Gain";
+  label.textContent = "マイク ゲイン Mic Gain";
 
   const slider = document.createElement("input");
   slider.type = "range";
   slider.id = "mic-gain-slider";
   slider.min = "0";
-  slider.max = "3";
+  slider.max = "5";
   slider.step = "0.05";
   slider.value = "1";
 
@@ -54,6 +54,97 @@ function setupMicGainSlider(micGain: Tone.Gain) {
   wrap.appendChild(value);
   // キャンバス(#sketch)の上に差し込む
   app.insertBefore(wrap, app.firstChild);
+}
+
+// ゲイン後の実信号レベルを表示するレベルメーター。
+// micGain の直後に Tone.Meter を挿すので、ループバックの ON/OFF に関係なく
+// 常に「今マイクがどれくらい拾っているか」を横バーで確認できる。
+// ピークホールドのマーカーと、0dBFS 到達時に点灯する CLIP 警告付き。
+function setupGainMeter(micGain: Tone.Gain) {
+  const app = document.querySelector<HTMLDivElement>("#app");
+  if (!app) return;
+
+  // レベル測定用。normalRange:false で dBFS 値を取得する。
+  const meter = new Tone.Meter({ normalRange: false, smoothing: 0.8 });
+  micGain.connect(meter);
+
+  const wrap = document.createElement("div");
+  wrap.id = "gain-meter";
+
+  const label = document.createElement("span");
+  label.id = "gain-meter-label";
+  label.textContent = "レベル Level";
+
+  const track = document.createElement("div");
+  track.id = "gain-meter-track";
+
+  const fill = document.createElement("div");
+  fill.id = "gain-meter-fill";
+
+  const peak = document.createElement("div");
+  peak.id = "gain-meter-peak";
+
+  track.appendChild(fill);
+  track.appendChild(peak);
+
+  const clip = document.createElement("span");
+  clip.id = "gain-meter-clip";
+  clip.textContent = "CLIP";
+
+  wrap.appendChild(label);
+  wrap.appendChild(track);
+  wrap.appendChild(clip);
+
+  // スライダー(#mic-gain)の直下に差し込む
+  const micGainEl = document.querySelector("#mic-gain");
+  if (micGainEl && micGainEl.nextSibling) {
+    app.insertBefore(wrap, micGainEl.nextSibling);
+  } else {
+    app.insertBefore(wrap, app.firstChild);
+  }
+
+  // dBFS を 0..1 のバー長へ写像するレンジ（-60dB を下限とする）。
+  const MIN_DB = -60;
+  const dbToFrac = (db: number) =>
+    Math.max(0, Math.min(1, (db - MIN_DB) / (0 - MIN_DB)));
+
+  let peakFrac = 0;
+  let peakHoldUntil = 0;
+  let clipUntil = 0;
+
+  const draw = () => {
+    const raw = meter.getValue();
+    // ステレオだと配列で返るので大きい方を採用する。
+    const db = Array.isArray(raw) ? Math.max(raw[0], raw[1]) : raw;
+    const frac = Number.isFinite(db) ? dbToFrac(db) : 0;
+
+    fill.style.width = (frac * 100).toFixed(1) + "%";
+
+    // レベルに応じて色を変える（緑→橙→赤）。
+    let color = "#22c55e";
+    if (db >= -1) color = "#ef4444";
+    else if (db >= -6) color = "#f59e0b";
+    fill.style.backgroundColor = color;
+
+    const now = performance.now();
+
+    // ピークホールド：更新時は即追従し、その後 1秒保持してから落ちる。
+    if (frac >= peakFrac) {
+      peakFrac = frac;
+      peakHoldUntil = now + 1000;
+    } else if (now > peakHoldUntil) {
+      peakFrac = Math.max(frac, peakFrac - 0.006);
+    }
+    peak.style.left = (peakFrac * 100).toFixed(1) + "%";
+    peak.style.display = peakFrac > 0 ? "block" : "none";
+
+    // クリップ判定：0dBFS 付近に達したら 1.2秒 CLIP を点灯保持する。
+    if (Number.isFinite(db) && db >= -0.1) clipUntil = now + 1200;
+    clip.classList.toggle("is-clipping", now < clipUntil);
+
+    requestAnimationFrame(draw);
+  };
+  requestAnimationFrame(draw);
 }
 
 if (!startButton) {
@@ -105,6 +196,8 @@ if (!startButton) {
 
     // マイクゲイン調整スライダー（iPad の指操作向けにネイティブ range を使用）
     setupMicGainSlider(micGain);
+    // スライダー直下にゲイン後のレベルメーターを表示
+    setupGainMeter(micGain);
 
     // p5 sketch definition
     new p5((p: p5) => {

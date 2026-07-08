@@ -97,3 +97,73 @@ canvas {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ゲイン後レベルメーター（スライダー直下） */
+#gain-meter {
+  width: 600px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-top: -6px; /* スライダーとの間隔を詰める */
+  margin-bottom: 12px;
+  background-color: rgb(165, 170, 168);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 18px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#gain-meter-label {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+#gain-meter-track {
+  position: relative;
+  flex: 1;
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#gain-meter-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background-color: #22c55e;
+  border-radius: 4px 0 0 4px;
+  /* width は毎フレーム更新するので transition は色のみ軽く効かせる */
+  transition: background-color 0.08s linear;
+}
+
+#gain-meter-peak {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  margin-left: -1px;
+  background-color: #fff;
+  display: none;
+}
+
+#gain-meter-clip {
+  width: 48px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 2px 0;
+}
+
+#gain-meter-clip.is-clipping {
+  color: #fff;
+  background-color: #ef4444;
+}
