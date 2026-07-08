@@ -16,6 +16,46 @@ const startButton = document.querySelector<HTMLButtonElement>("button");
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 745;
 
+// マイク入力ゲインのスライダーをキャンバス上部に差し込む。
+// キャンバス外のネイティブ DOM なので、既存のタッチ判定・座標には影響しない。
+function setupMicGainSlider(micGain: Tone.Gain) {
+  const app = document.querySelector<HTMLDivElement>("#app");
+  if (!app) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "mic-gain";
+
+  const label = document.createElement("label");
+  label.id = "mic-gain-label";
+  label.setAttribute("for", "mic-gain-slider");
+  label.textContent = "マイク入力 Mic Gain";
+
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.id = "mic-gain-slider";
+  slider.min = "0";
+  slider.max = "3";
+  slider.step = "0.05";
+  slider.value = "1";
+
+  const value = document.createElement("span");
+  value.id = "mic-gain-value";
+  value.textContent = "×1.00";
+
+  slider.addEventListener("input", () => {
+    const v = parseFloat(slider.value);
+    // クリックノイズを避けて滑らかに反映
+    micGain.gain.rampTo(v, 0.03);
+    value.textContent = "×" + v.toFixed(2);
+  });
+
+  wrap.appendChild(label);
+  wrap.appendChild(slider);
+  wrap.appendChild(value);
+  // キャンバス(#sketch)の上に差し込む
+  app.insertBefore(wrap, app.firstChild);
+}
+
 if (!startButton) {
   console.error("Start button not found – aborting.");
 } else {
@@ -54,10 +94,17 @@ if (!startButton) {
       noiseSuppression: false,
       autoGainControl: false,
     });
+    // マイク入力ゲイン段。mic のすぐ後ろに挟み、録音・ビジュアライザ・
+    // ループバックすべてをこのゲイン後の信号に通す（＝スライダーが全体に効く）。
+    const micGain = new Tone.Gain(1);
+    mic.connect(micGain);
     recorder = new Tone.Recorder({ mimeType: "audio/mp4" });
-    mic.connect(recorder);
+    micGain.connect(recorder);
     analyser = new Tone.Analyser("waveform", 512);
     Tone.getDestination().connect(analyser);
+
+    // マイクゲイン調整スライダー（iPad の指操作向けにネイティブ range を使用）
+    setupMicGainSlider(micGain);
 
     // p5 sketch definition
     new p5((p: p5) => {
@@ -88,7 +135,7 @@ if (!startButton) {
           if (loaded === totalImages) {
             for (let i = 0; i < 6; i++) {
               audios.push(
-                new AudioBank(p, 25 + i * 100, 25, i, recImg, playImg, downloadImg, loopImg, mic, analyser)
+                new AudioBank(p, 25 + i * 100, 25, i, recImg, playImg, downloadImg, loopImg, micGain, analyser)
               );
             }
             downloadAllButton = new DownloadAllButton(
@@ -105,7 +152,7 @@ if (!startButton) {
               downloadAllBtnY,
               downloadAllBtnSize,
               loopbackImg,
-              mic
+              micGain
             );
           }
         };

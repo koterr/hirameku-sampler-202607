@@ -19,7 +19,7 @@ class AudioBank {
   buttonSize: number = 50;
   buttonMargin: number = 10;
   buttonOffsetY: number = 60;
-  mic: Tone.UserMedia;
+  mic: Tone.ToneAudioNode;
   analyser: Tone.Analyser;
 
   constructor(
@@ -31,7 +31,7 @@ class AudioBank {
     playIcon: p5.Element,
     downloadIcon: p5.Element,
     loopIcon: p5.Element,
-    mic: Tone.UserMedia,
+    mic: Tone.ToneAudioNode,
     analyser: Tone.Analyser
   ) {
     this.p = p;
