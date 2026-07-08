@@ -1,0 +1,8 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Headband -->
+  <path d="M14 40V30C14 20.0589 22.0589 12 32 12C41.9411 12 50 20.0589 50 30V40" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Left Ear Cup -->
+  <rect x="8" y="36" width="12" height="18" rx="4" stroke="black" fill="black" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Right Ear Cup -->
+  <rect x="44" y="36" width="12" height="18" rx="4" stroke="black" fill="black" stroke-width="4" stroke-linejoin="round"/>
+</svg>
