@@ -54,7 +54,7 @@ function setupMicGainSlider(micGain: Tone.Gain) {
   slider.type = "range";
   slider.id = "mic-gain-slider";
   slider.min = "0";
-  slider.max = "5";
+  slider.max = "8";
   slider.step = "0.05";
   slider.value = "1";
 
@@ -99,8 +99,9 @@ function setupGainMeter(micGain: Tone.Gain) {
   const track = document.createElement("div");
   track.id = "gain-meter-track";
 
-  // dBFS を 0..1 のバー長へ写像するレンジ（-60dB を下限とする）。
-  const MIN_DB = -60;
+  // dBFS を 0..1 のバー長へ写像するレンジ（-48dB を下限とする）。
+  // レンジを狭めることで、同じ dB 変化がより多くのセグメントを動かす。
+  const MIN_DB = -48;
   const dbToFrac = (db: number) =>
     Math.max(0, Math.min(1, (db - MIN_DB) / (0 - MIN_DB)));
 
