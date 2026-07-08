@@ -5,9 +5,14 @@ html {
 
 body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   display: grid;
-  place-items: center;
+  /* スライダー＋メーターを足すと縦がビューポートを超えるため、
+     中央寄せ(place-items:center)だと下がはみ出て触れなくなる。
+     上寄せ＋自然スクロールにして全体に届くようにする。 */
+  place-items: start center;
+  padding: 16px 0;
+  box-sizing: border-box;
   font-family: sans-serif;
   background-color: rgb(165, 170, 168, 0.25);
   position: relative;
@@ -24,7 +29,11 @@ canvas {
   background: none;
   border: 2px solid #000;
   border-radius: 8px;
-  position: absolute;
+  /* body のレイアウトに依存せず常に画面中央に置く */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 280px;
   height: 64px;
   font-size: 24px;
@@ -124,46 +133,37 @@ canvas {
 #gain-meter-track {
   position: relative;
   flex: 1;
-  height: 20px;
-  background-color: rgba(0, 0, 0, 0.35);
+  height: 22px;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.5);
   border-radius: 4px;
-  overflow: hidden;
 }
 
-#gain-meter-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 0%;
-  background-color: #22c55e;
-  border-radius: 4px 0 0 4px;
-  /* width は毎フレーム更新するので transition は色のみ軽く効かせる */
-  transition: background-color 0.08s linear;
+/* 段階式(LED風)セグメント。未到達でもゾーン色を薄く見せておく。 */
+.gain-meter-seg {
+  flex: 1;
+  border-radius: 2px;
+  background-color: var(--seg-color, #22c55e);
+  opacity: 0.16; /* 消灯時：色は分かるが薄く */
+  transition: opacity 0.05s linear;
+}
+
+.gain-meter-seg.on {
+  opacity: 1; /* 点灯時：フル発光 */
+  box-shadow: 0 0 4px var(--seg-color, #22c55e);
 }
 
 #gain-meter-peak {
   position: absolute;
-  top: 0;
-  height: 100%;
+  top: 2px;
+  bottom: 2px;
   width: 2px;
   margin-left: -1px;
   background-color: #fff;
+  box-shadow: 0 0 3px #fff;
   display: none;
-}
-
-#gain-meter-clip {
-  width: 48px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.25);
-  border-radius: 4px;
-  padding: 2px 0;
-}
-
-#gain-meter-clip.is-clipping {
-  color: #fff;
-  background-color: #ef4444;
+  pointer-events: none;
 }

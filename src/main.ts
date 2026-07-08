@@ -65,7 +65,8 @@ function setupGainMeter(micGain: Tone.Gain) {
   if (!app) return;
 
   // レベル測定用。normalRange:false で dBFS 値を取得する。
-  const meter = new Tone.Meter({ normalRange: false, smoothing: 0.8 });
+  // smoothing は 1 に近いほど平均時間が長く、表示が滑らか（動きが穏やか）になる。
+  const meter = new Tone.Meter({ normalRange: false, smoothing: 0.92 });
   micGain.connect(meter);
 
   const wrap = document.createElement("div");
@@ -78,22 +79,37 @@ function setupGainMeter(micGain: Tone.Gain) {
   const track = document.createElement("div");
   track.id = "gain-meter-track";
 
-  const fill = document.createElement("div");
-  fill.id = "gain-meter-fill";
+  // dBFS を 0..1 のバー長へ写像するレンジ（-60dB を下限とする）。
+  const MIN_DB = -60;
+  const dbToFrac = (db: number) =>
+    Math.max(0, Math.min(1, (db - MIN_DB) / (0 - MIN_DB)));
+
+  // 段階式（LED風）セグメントを生成する。
+  // 各セグメントには到達しきい値(dB)とゾーン色を持たせ、
+  // 未到達でも薄く色を表示して緑→橙→赤のゾーンを常に見せる。
+  const SEG_COUNT = 28;
+  const segs: Array<{ el: HTMLDivElement; db: number }> = [];
+  for (let i = 0; i < SEG_COUNT; i++) {
+    // このセグメントが点灯する dB しきい値（左=小さい, 右=0dBFS付近）
+    // 配色は案A（デジタルの基準録音レベル -18dBFS を緑の上限とする）:
+    //   緑: 〜-18dBFS / 黄: -18〜-6dBFS / 赤: -6〜0dBFS
+    const segDb = MIN_DB + ((i + 0.5) / SEG_COUNT) * (0 - MIN_DB);
+    let color = "#22c55e"; // 緑（〜-18）
+    if (segDb >= -6) color = "#ef4444"; // 赤（-6〜0）
+    else if (segDb >= -18) color = "#eab308"; // 黄（-18〜-6）
+    const el = document.createElement("div");
+    el.className = "gain-meter-seg";
+    el.style.setProperty("--seg-color", color);
+    track.appendChild(el);
+    segs.push({ el, db: segDb });
+  }
 
   const peak = document.createElement("div");
   peak.id = "gain-meter-peak";
-
-  track.appendChild(fill);
   track.appendChild(peak);
-
-  const clip = document.createElement("span");
-  clip.id = "gain-meter-clip";
-  clip.textContent = "CLIP";
 
   wrap.appendChild(label);
   wrap.appendChild(track);
-  wrap.appendChild(clip);
 
   // スライダー(#mic-gain)の直下に差し込む
   const micGainEl = document.querySelector("#mic-gain");
@@ -103,14 +119,8 @@ function setupGainMeter(micGain: Tone.Gain) {
     app.insertBefore(wrap, app.firstChild);
   }
 
-  // dBFS を 0..1 のバー長へ写像するレンジ（-60dB を下限とする）。
-  const MIN_DB = -60;
-  const dbToFrac = (db: number) =>
-    Math.max(0, Math.min(1, (db - MIN_DB) / (0 - MIN_DB)));
-
   let peakFrac = 0;
   let peakHoldUntil = 0;
-  let clipUntil = 0;
 
   const draw = () => {
     const raw = meter.getValue();
@@ -118,13 +128,10 @@ function setupGainMeter(micGain: Tone.Gain) {
     const db = Array.isArray(raw) ? Math.max(raw[0], raw[1]) : raw;
     const frac = Number.isFinite(db) ? dbToFrac(db) : 0;
 
-    fill.style.width = (frac * 100).toFixed(1) + "%";
-
-    // レベルに応じて色を変える（緑→橙→赤）。
-    let color = "#22c55e";
-    if (db >= -1) color = "#ef4444";
-    else if (db >= -6) color = "#f59e0b";
-    fill.style.backgroundColor = color;
+    // 現在のレベルに達したセグメントを点灯（.on）、未到達は薄く表示。
+    for (let i = 0; i < segs.length; i++) {
+      segs[i].el.classList.toggle("on", Number.isFinite(db) && db >= segs[i].db);
+    }
 
     const now = performance.now();
 
@@ -137,10 +144,6 @@ function setupGainMeter(micGain: Tone.Gain) {
     }
     peak.style.left = (peakFrac * 100).toFixed(1) + "%";
     peak.style.display = peakFrac > 0 ? "block" : "none";
-
-    // クリップ判定：0dBFS 付近に達したら 1.2秒 CLIP を点灯保持する。
-    if (Number.isFinite(db) && db >= -0.1) clipUntil = now + 1200;
-    clip.classList.toggle("is-clipping", now < clipUntil);
 
     requestAnimationFrame(draw);
   };
