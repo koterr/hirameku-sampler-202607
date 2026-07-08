@@ -7,7 +7,7 @@ export default class LoopbackButton {
   y: number;
   size: number;
   icon: p5.Element;
-  mic: Tone.UserMedia;
+  mic: Tone.ToneAudioNode;
   enabled: boolean;
 
   constructor(
@@ -16,7 +16,7 @@ export default class LoopbackButton {
     y: number,
     size: number,
     icon: p5.Element,
-    mic: Tone.UserMedia
+    mic: Tone.ToneAudioNode
   ) {
     this.p = p;
     this.x = x;
