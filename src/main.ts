@@ -16,6 +16,26 @@ const startButton = document.querySelector<HTMLButtonElement>("button");
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 745;
 
+// iPad 等でコンテンツ全体（スライダー＋メーター＋キャンバス）が画面に
+// 収まるよう、画面の縦横比に合わせて viewport 幅を計算し全体を縮小する。
+// ビューポート倍率での縮小なので p5 のタッチ座標はズレない
+// （CSS transform:scale は p5 v2 の座標計算を壊すため使わない）。
+function fitViewport() {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (!meta) return;
+  // 画面の縦横比（innerH/innerW はビューポート幅を変えても比は不変）。
+  const aspect = window.innerHeight / window.innerWidth;
+  if (!Number.isFinite(aspect) || aspect <= 0) return;
+  // コンテンツは固定ピクセルなので実高さはビューポート幅に依らず一定。
+  const contentH = document.documentElement.scrollHeight;
+  // 高さが収まる最小の viewport 幅（少し余白を持たせる）。
+  const needW = Math.ceil((contentH / aspect) * 1.02);
+  const W = Math.max(WINDOW_WIDTH, needW);
+  meta.setAttribute("content", `width=${W}`);
+}
+window.addEventListener("resize", fitViewport);
+window.addEventListener("orientationchange", fitViewport);
+
 // マイク入力ゲインのスライダーをキャンバス上部に差し込む。
 // キャンバス外のネイティブ DOM なので、既存のタッチ判定・座標には影響しない。
 function setupMicGainSlider(micGain: Tone.Gain) {
@@ -275,6 +295,10 @@ if (!startButton) {
 
         // Canvas
         p.createCanvas(WINDOW_WIDTH, WINDOW_HEIGHT);
+
+        // キャンバス生成後、全体が画面に収まるよう viewport を調整。
+        // レイアウト確定を待って次フレームで実行する。
+        requestAnimationFrame(fitViewport);
       };
 
       // ---------- draw ----------
