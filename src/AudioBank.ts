@@ -1,16 +1,6 @@
 import p5 from "p5";
 import * as Tone from "tone";
-
-// 録音 Blob の実 MIME 型から保存ファイルの拡張子を導く。
-// mimeType 固定ではなく実態(Blob.type)を見るので、mp4/webm どちらで
-// 録れても「中身の形式」と「拡張子」が一致する。
-function extensionForMime(mime: string): string {
-  if (mime.includes("mp4")) return ".mp4";
-  if (mime.includes("webm")) return ".webm";
-  if (mime.includes("ogg")) return ".ogg";
-  if (mime.includes("wav")) return ".wav";
-  return ".mp4"; // 不明時は本番(iPad Safari)の既定である mp4 とする
-}
+import { encodeWav } from "./wav";
 
 class AudioBank {
   p: p5;
@@ -104,13 +94,28 @@ class AudioBank {
 
   download() {
     if (this.recordedURL === "") return;
-    const ext = extensionForMime(this.recordedType);
+
+    // 録音直後に player へロード済みのデコード結果（AudioBuffer）を WAV 化する。
+    // 録音 Blob（mp4/AAC）をそのまま保存すると Windows版 Ableton 等で開けないため。
+    const buffer = this.player.buffer.get();
+    if (!buffer) {
+      console.error(
+        `[AudioBank ${this.id}] download failed: buffer not ready (recordedType=${this.recordedType})`
+      );
+      return;
+    }
+
+    const blob = encodeWav(buffer);
+    const url = URL.createObjectURL(blob);
     // ISO 日時の ":" や "." が拡張子と誤認されないよう "-" に置換する。
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const anchor = document.createElement("a");
-    anchor.download = `record-${this.id}-${stamp}${ext}`;
-    anchor.href = this.recordedURL;
+    anchor.download = `record-${this.id}-${stamp}.wav`;
+    anchor.href = url;
     anchor.click();
+
+    // 保存処理が始まるまで URL を生かしておきたいので、あとで解放する（メモリリーク防止）。
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   async contains(x: number, y: number, recorder: Tone.Recorder) {
