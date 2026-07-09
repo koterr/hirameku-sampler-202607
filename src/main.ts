@@ -16,53 +16,19 @@ const startButton = document.querySelector<HTMLButtonElement>("button");
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 745;
 
-// iPad 等でコンテンツ全体（スライダー＋メーター＋キャンバス）が画面に
-// 収まるよう、画面の縦横比に合わせて viewport 幅を計算し全体を縮小する。
-// ビューポート倍率での縮小なので p5 のタッチ座標はズレない
-// （CSS transform:scale は p5 v2 の座標計算を壊すため使わない）。
-function fitViewport() {
-  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-  if (!meta) return;
-  // 画面の縦横比（innerH/innerW はビューポート幅を変えても比は不変）。
-  const aspect = window.innerHeight / window.innerWidth;
-  if (!Number.isFinite(aspect) || aspect <= 0) return;
-  // コンテンツは固定ピクセルなので実高さはビューポート幅に依らず一定。
-  const contentH = document.documentElement.scrollHeight;
-  // 高さが収まる最小の viewport 幅（少し余白を持たせる）。
-  const needW = Math.ceil((contentH / aspect) * 1.02);
-  const W = Math.max(WINDOW_WIDTH, needW);
-  // user-scalable=no も維持する（meta 単体では iOS Safari は無視するが、念のため）。
-  meta.setAttribute("content", `width=${W}, user-scalable=no`);
-}
-window.addEventListener("resize", fitViewport);
-window.addEventListener("orientationchange", fitViewport);
-
 // iPad Safari のピンチズーム・ダブルタップズームを無効化する。
 // iOS Safari は viewport の user-scalable=no を無視するため JS で捕捉する。
 // 重要: 1本指のタッチ／タップは絶対に preventDefault しない（＝ canvas の
-// 録音・再生ボタンやゲインスライダーの1本指操作を壊さない）。
-// 2本指以上のときだけ潰す形にすることで単指操作の互換性を保つ。
+// 録音・再生ボタンやゲインスライダーの1本指操作、通常のスクロールを壊さない）。
+// 2本指以上（＝ピンチ）のときだけ潰す。
 function setupZoomGuards() {
-  // ピンチ（2本指以上）だけを無効化。単指の touchstart は素通し（タップを壊さない）。
+  // ピンチ（2本指以上）だけを無効化。単指イベントは素通しする。
   const blockMultiTouch = (e: TouchEvent) => {
     if (e.touches.length > 1) e.preventDefault();
   };
   // passive:false でないと preventDefault が効かない。
   document.addEventListener("touchstart", blockMultiTouch, { passive: false });
-
-  // touchmove: 2本指はピンチとして無効化。
-  // 単指は「余白のスクロール（＝ツールバー開閉で全体が縮む挙動）」だけを止め、
-  // スライダー・メーター・canvas 上の操作は素通しする（＝これらの単指操作は無傷）。
-  const onTouchMove = (e: TouchEvent) => {
-    if (e.touches.length > 1) {
-      e.preventDefault();
-      return;
-    }
-    const el = e.target as Element | null;
-    if (el && el.closest("#mic-gain, #gain-meter, canvas")) return;
-    e.preventDefault();
-  };
-  document.addEventListener("touchmove", onTouchMove, { passive: false });
+  document.addEventListener("touchmove", blockMultiTouch, { passive: false });
 
   // iOS 特有のズームジェスチャ（ピンチ）を塞ぐ。
   const blockGesture = (e: Event) => e.preventDefault();
@@ -345,10 +311,6 @@ if (!startButton) {
 
         // Canvas
         p.createCanvas(WINDOW_WIDTH, WINDOW_HEIGHT);
-
-        // キャンバス生成後、全体が画面に収まるよう viewport を調整。
-        // レイアウト確定を待って次フレームで実行する。
-        requestAnimationFrame(fitViewport);
       };
 
       // ---------- draw ----------
