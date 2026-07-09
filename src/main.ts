@@ -107,10 +107,6 @@ function setupGainMeter(micGain: Tone.Gain) {
   const wrap = document.createElement("div");
   wrap.id = "gain-meter";
 
-  const label = document.createElement("span");
-  label.id = "gain-meter-label";
-  label.textContent = "レベル Level";
-
   const track = document.createElement("div");
   track.id = "gain-meter-track";
 
@@ -144,7 +140,6 @@ function setupGainMeter(micGain: Tone.Gain) {
   peak.id = "gain-meter-peak";
   track.appendChild(peak);
 
-  wrap.appendChild(label);
   wrap.appendChild(track);
 
   // スライダー(#mic-gain)の直下に差し込む

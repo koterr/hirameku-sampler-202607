@@ -120,10 +120,6 @@ canvas {
   -webkit-user-select: none;
 }
 
-#gain-meter-label {
-  white-space: nowrap;
-  font-weight: 600;
-}
 
 #gain-meter-track {
   position: relative;
