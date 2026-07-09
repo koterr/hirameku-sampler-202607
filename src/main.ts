@@ -31,10 +31,46 @@ function fitViewport() {
   // 高さが収まる最小の viewport 幅（少し余白を持たせる）。
   const needW = Math.ceil((contentH / aspect) * 1.02);
   const W = Math.max(WINDOW_WIDTH, needW);
-  meta.setAttribute("content", `width=${W}`);
+  // user-scalable=no も維持する（meta 単体では iOS Safari は無視するが、念のため）。
+  meta.setAttribute("content", `width=${W}, user-scalable=no`);
 }
 window.addEventListener("resize", fitViewport);
 window.addEventListener("orientationchange", fitViewport);
+
+// iPad Safari のピンチズーム・ダブルタップズームを無効化する。
+// iOS Safari は viewport の user-scalable=no を無視するため JS で捕捉する。
+// 重要: 1本指のタッチ／タップは絶対に preventDefault しない（＝ canvas の
+// 録音・再生ボタンやゲインスライダーの1本指操作を壊さない）。
+// 2本指以上のときだけ潰す形にすることで単指操作の互換性を保つ。
+function setupZoomGuards() {
+  // ピンチ（2本指以上）だけを無効化。単指イベントは素通しする。
+  const blockMultiTouch = (e: TouchEvent) => {
+    if (e.touches.length > 1) e.preventDefault();
+  };
+  // passive:false でないと preventDefault が効かない。
+  document.addEventListener("touchstart", blockMultiTouch, { passive: false });
+  document.addEventListener("touchmove", blockMultiTouch, { passive: false });
+
+  // iOS 特有のズームジェスチャ（ピンチ）を塞ぐ。
+  const blockGesture = (e: Event) => e.preventDefault();
+  document.addEventListener("gesturestart", blockGesture, { passive: false });
+  document.addEventListener("gesturechange", blockGesture, { passive: false });
+  document.addEventListener("gestureend", blockGesture, { passive: false });
+
+  // ダブルタップズーム：300ms 以内の連続タップの2回目だけを打ち消す。
+  // 1回目（＝通常の単発タップ）は決して preventDefault しないので単タップは無傷。
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    "touchend",
+    (e) => {
+      const now = performance.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    },
+    { passive: false }
+  );
+}
+setupZoomGuards();
 
 // マイク入力ゲインのスライダーをキャンバス上部に差し込む。
 // キャンバス外のネイティブ DOM なので、既存のタッチ判定・座標には影響しない。
