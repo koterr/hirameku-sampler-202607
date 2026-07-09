@@ -74,7 +74,7 @@ canvas {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 3px 16px; /* 縦を詰めて画面に収める（横はそのまま） */
+  padding: 6px 16px; /* メーターと縦サイズを揃える（両ボックス同じ高さ） */
   margin-bottom: 8px;
   background-color: rgb(165, 170, 168);
   border-radius: 8px;
@@ -109,7 +109,7 @@ canvas {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 6px 16px; /* ゲインボックスと縦サイズを揃える（両ボックス同じ高さ） */
   margin-top: -6px; /* スライダーとの間隔を詰める */
   margin-bottom: 12px;
   background-color: rgb(165, 170, 168);

@@ -69,7 +69,7 @@ function setupMicGainSlider(micGain: Tone.Gain) {
   slider.type = "range";
   slider.id = "mic-gain-slider";
   slider.min = "0";
-  slider.max = "8";
+  slider.max = "10";
   slider.step = "0.05";
   slider.value = "1";
 
@@ -227,6 +227,11 @@ if (!startButton) {
     micGain.connect(recorder);
     analyser = new Tone.Analyser("waveform", 512);
     Tone.getDestination().connect(analyser);
+
+    // 出力（アウト）を固定でゲインの 1.5 倍にする。
+    // recorder は micGain 直後に接続しているので録音レベルには影響しない。
+    // ループバック・再生など destination へ出す音のみ ×1.5 される。
+    Tone.getDestination().volume.value = 20 * Math.log10(1.5); // ≈ +3.52dB = ×1.5
 
     // マイクゲイン調整スライダー（iPad の指操作向けにネイティブ range を使用）
     setupMicGainSlider(micGain);
