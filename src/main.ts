@@ -43,13 +43,26 @@ window.addEventListener("orientationchange", fitViewport);
 // 録音・再生ボタンやゲインスライダーの1本指操作を壊さない）。
 // 2本指以上のときだけ潰す形にすることで単指操作の互換性を保つ。
 function setupZoomGuards() {
-  // ピンチ（2本指以上）だけを無効化。単指イベントは素通しする。
+  // ピンチ（2本指以上）だけを無効化。単指の touchstart は素通し（タップを壊さない）。
   const blockMultiTouch = (e: TouchEvent) => {
     if (e.touches.length > 1) e.preventDefault();
   };
   // passive:false でないと preventDefault が効かない。
   document.addEventListener("touchstart", blockMultiTouch, { passive: false });
-  document.addEventListener("touchmove", blockMultiTouch, { passive: false });
+
+  // touchmove: 2本指はピンチとして無効化。
+  // 単指は「余白のスクロール（＝ツールバー開閉で全体が縮む挙動）」だけを止め、
+  // スライダー・メーター・canvas 上の操作は素通しする（＝これらの単指操作は無傷）。
+  const onTouchMove = (e: TouchEvent) => {
+    if (e.touches.length > 1) {
+      e.preventDefault();
+      return;
+    }
+    const el = e.target as Element | null;
+    if (el && el.closest("#mic-gain, #gain-meter, canvas")) return;
+    e.preventDefault();
+  };
+  document.addEventListener("touchmove", onTouchMove, { passive: false });
 
   // iOS 特有のズームジェスチャ（ピンチ）を塞ぐ。
   const blockGesture = (e: Event) => e.preventDefault();
